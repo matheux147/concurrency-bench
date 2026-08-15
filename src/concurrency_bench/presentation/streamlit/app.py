@@ -13,7 +13,10 @@ from concurrency_bench.presentation.streamlit.tables import (
     build_comparison_table,
     build_stock_table,
 )
-from concurrency_bench.presentation.streamlit.charts import render_charts
+from concurrency_bench.presentation.streamlit.charts import (
+    render_charts,
+    render_specialized_plots_and_export,
+)
 
 
 def main():
@@ -130,6 +133,7 @@ def main():
                 st.markdown("---")
                 st.header("Gráficos Comparativos")
                 render_charts(comparison)
+                render_specialized_plots_and_export(comparison, key_prefix="exec")
             else:
                 st.info(
                     "Configure os parâmetros na barra lateral e clique em 'Executar Experimento' para iniciar.")
@@ -217,6 +221,7 @@ def main():
                 st.markdown("---")
                 st.subheader("Gráficos do Experimento")
                 render_charts(comp)
+                render_specialized_plots_and_export(comp, key_prefix=f"hist_{exp.id}")
 
 
 if __name__ == "__main__":

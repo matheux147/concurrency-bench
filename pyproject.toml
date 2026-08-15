@@ -3,7 +3,7 @@ requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "concurrency-lab"
+name = "concurrency-bench"
 version = "0.1.0"
 description = "Laboratório didático de programação concorrente em Python."
 readme = "README.md"
@@ -14,6 +14,7 @@ dependencies = [
     "psycopg[binary]>=3.2,<4",
     "sqlalchemy>=2,<3",
     "streamlit>=1.30,<2",
+    "matplotlib>=3.8,<4",
 ]
 
 [project.optional-dependencies]
