@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session, sessionmaker
 
@@ -21,6 +21,14 @@ def reset_schema(engine: Engine) -> None:
     from concurrency_bench.infrastructure.database import models as _models  # noqa: F401
 
     Base.metadata.create_all(engine)
+    with engine.connect() as conn:
+        with conn.begin():
+            try:
+                conn.execute(
+                    text("ALTER TABLE experiment_results ADD COLUMN IF NOT EXISTS strategy_name VARCHAR(100)")
+                )
+            except Exception:
+                pass
 
 
 def _resolve_database_url(database_url: str | None) -> str:

@@ -11,13 +11,14 @@ class ExperimentResult:
     """Representa as métricas essenciais produzidas por uma execução."""
 
     experiment_name: str
-    strategy: ExecutionStrategy
+    strategy: ExecutionStrategy | str
     task_count: int
     completed_task_count: int
     total_time_seconds: float
     cpu_usage_percent: float | None = None
     memory_usage_mb: float | None = None
     metadata: Mapping[str, Any] = field(default_factory=dict)
+    strategy_name: str | None = None
 
     def __post_init__(self) -> None:
         if not self.experiment_name.strip():

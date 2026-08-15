@@ -65,6 +65,7 @@ class ExperimentResultModel(Base):
         nullable=False,
     )
     strategy: Mapped[str] = mapped_column(String(50), nullable=False)
+    strategy_name: Mapped[str | None] = mapped_column(String(100), nullable=True)
     completed_task_count: Mapped[int] = mapped_column(Integer, nullable=False)
     total_time_seconds: Mapped[float] = mapped_column(Float, nullable=False)
     cpu_usage_percent: Mapped[float | None] = mapped_column(

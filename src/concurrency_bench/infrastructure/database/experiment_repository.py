@@ -1,7 +1,7 @@
 import json
 from uuid import UUID
 from datetime import datetime, timezone
-from sqlalchemy import select
+from sqlalchemy import select, delete
 from sqlalchemy.orm import Session, sessionmaker
 
 from concurrency_bench.application.ports.experiment_repository import ExperimentRepository
@@ -55,7 +55,8 @@ class SqlAlchemyExperimentRepository(ExperimentRepository):
                     session.add(
                         ExperimentResultModel(
                             experiment_id=experiment_id,
-                            strategy=result.strategy.value,
+                            strategy=result.strategy.value if hasattr(result.strategy, "value") else str(result.strategy),
+                            strategy_name=result.strategy_name,
                             completed_task_count=result.completed_task_count,
                             total_time_seconds=result.total_time_seconds,
                             cpu_usage_percent=result.cpu_usage_percent,
@@ -88,6 +89,18 @@ class SqlAlchemyExperimentRepository(ExperimentRepository):
                 output.append((exp, res))
             return output
 
+    def delete(self, experiment_id: UUID) -> None:
+        with self._session_factory() as session:
+            with session.begin():
+                existing = session.get(ExperimentModel, experiment_id)
+                if existing is not None:
+                    session.delete(existing)
+
+    def delete_all(self) -> None:
+        with self._session_factory() as session:
+            with session.begin():
+                session.execute(delete(ExperimentModel))
+
     def _to_domain_experiment(self, row: ExperimentModel) -> Experiment:
         params = json.loads(row.parameters_json)
         created_at = row.created_at.replace(
@@ -110,7 +123,6 @@ class SqlAlchemyExperimentRepository(ExperimentRepository):
         # To fetch, we can use row.experiment.name
         exp_name = row.experiment.name if row.experiment else "Persistência"
 
-        # Ensure correct strategy mapping
         strategy_val = row.strategy
         if strategy_val == "threads":
             strategy = ExecutionStrategy.THREADS
@@ -118,8 +130,10 @@ class SqlAlchemyExperimentRepository(ExperimentRepository):
             strategy = ExecutionStrategy.PROCESSES
         elif strategy_val == "async":
             strategy = ExecutionStrategy.ASYNC
-        else:
+        elif strategy_val == "sequential":
             strategy = ExecutionStrategy.SEQUENTIAL
+        else:
+            strategy = strategy_val
 
         return ExperimentResult(
             experiment_name=exp_name,
@@ -130,4 +144,5 @@ class SqlAlchemyExperimentRepository(ExperimentRepository):
             cpu_usage_percent=row.cpu_usage_percent,
             memory_usage_mb=row.memory_usage_mb,
             metadata=meta,
+            strategy_name=row.strategy_name,
         )
