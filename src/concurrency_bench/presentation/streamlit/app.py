@@ -2,12 +2,15 @@ import streamlit as st
 import traceback
 
 from concurrency_bench.domain.enums import ExperimentType
+from concurrency_bench.application.benchmarks import BenchmarkComparison
 from concurrency_bench.presentation.streamlit.config import render_config
 from concurrency_bench.presentation.streamlit.executor import (
     run_cpu_bound_experiment,
     run_io_bound_experiment,
     run_stock_experiment,
     load_experiment_history,
+    delete_experiment,
+    delete_all_experiments,
 )
 from concurrency_bench.presentation.streamlit.tables import (
     build_comparison_table,
@@ -17,6 +20,69 @@ from concurrency_bench.presentation.streamlit.charts import (
     render_charts,
     render_specialized_plots_and_export,
 )
+
+
+def render_experiment_results(
+    comparison: BenchmarkComparison,
+    experiment_type: ExperimentType,
+    stocks_map: dict[str, int] | None = None,
+    initial_stock: int | None = None,
+    key_prefix: str = "",
+):
+    st.header("Resumo dos Resultados")
+
+    if experiment_type == ExperimentType.DATABASE:
+        current_initial_stock = initial_stock if initial_stock is not None else 10
+        current_stocks_map = stocks_map if stocks_map is not None else {}
+        stock_df = build_stock_table(
+            comparison, current_stocks_map, current_initial_stock)
+
+        st.dataframe(stock_df, use_container_width=True)
+
+        for idx, row in stock_df.iterrows():
+            with st.expander(f"Cenário: {row['Cenário']}", expanded=True):
+                c1, c2, c3, c4 = st.columns(4)
+                c1.metric(
+                    "Estoque Inicial -> Final", f"{row['Estoque Inicial']} -> {row['Estoque Final']}")
+                c2.metric("Aprovadas / Rejeitadas",
+                          f"{row['Aprovadas']} / {row['Rejeitadas']}")
+                c3.metric("Tempo Médio",
+                          f"{row['Tempo Médio (s)']}")
+                c4.metric(
+                    "Throughput Médio", f"{row['Throughput Médio (tentativas/s)']} tent/s")
+
+                if row["Inconsistência"] != "Não":
+                    st.error(
+                        f"Inconsistências detectadas: {row['Inconsistência']}")
+                else:
+                    st.info(
+                        "Consistência do estoque mantida com sucesso.")
+    else:
+        comp_df = build_comparison_table(comparison)
+        st.dataframe(comp_df, use_container_width=True)
+
+        for summary in comparison.summaries:
+            with st.expander(f"Estratégia: {summary.strategy_name}", expanded=True):
+                c1, c2, c3, c4 = st.columns(4)
+                c1.metric("Tempo Mediano",
+                          f"{summary.elapsed.median:.4f}s")
+                c2.metric(
+                    "Throughput Médio", f"{summary.throughput.average:.2f} tarefas/s")
+
+                speedup_str = f"{summary.speedup:.2f}x" if summary.speedup is not None else "N/D"
+                c3.metric("Speedup (vs Sequential)", speedup_str)
+
+                cpu_avg = summary.cpu_usage_percent.average if summary.cpu_usage_percent else None
+                mem_avg = summary.memory_usage_mb.average if summary.memory_usage_mb else None
+                cpu_str = f"{cpu_avg:.1f}%" if cpu_avg is not None else "N/D"
+                mem_str = f"{mem_avg:.1f} MB" if mem_avg is not None else "N/D"
+                c4.metric("CPU / Memória",
+                          f"{cpu_str} / {mem_str}")
+
+    st.markdown("---")
+    st.header("Gráficos Comparativos")
+    render_charts(comparison)
+    render_specialized_plots_and_export(comparison, key_prefix=key_prefix)
 
 
 def main():
@@ -81,59 +147,20 @@ def main():
                 st.success(
                     f"Experimento '{comparison.scenario_name}' concluído com sucesso!")
 
-                st.header("Resumo dos Resultados")
-
-                if scenario_type == "Stock / PostgreSQL":
-                    stocks_map = st.session_state.get("stocks_map", {})
-                    stock_df = build_stock_table(
-                        comparison, stocks_map, config.initial_stock)
-
-                    st.dataframe(stock_df, use_container_width=True)
-
-                    for idx, row in stock_df.iterrows():
-                        with st.expander(f"Cenário: {row['Cenário']}", expanded=True):
-                            c1, c2, c3, c4 = st.columns(4)
-                            c1.metric(
-                                "Estoque Inicial -> Final", f"{row['Estoque Inicial']} -> {row['Estoque Final']}")
-                            c2.metric("Aprovadas / Rejeitadas",
-                                      f"{row['Aprovadas']} / {row['Rejeitadas']}")
-                            c3.metric("Tempo Médio",
-                                      f"{row['Tempo Médio (s)']}")
-                            c4.metric(
-                                "Throughput Médio", f"{row['Throughput Médio (tentativas/s)']} tent/s")
-
-                            if row["Inconsistência"] != "Não":
-                                st.error(
-                                    f"Inconsistências detectadas: {row['Inconsistência']}")
-                            else:
-                                st.info(
-                                    "Consistência do estoque mantida com sucesso.")
+                if scenario_type == "CPU-bound":
+                    exp_type = ExperimentType.CPU_BOUND
+                elif scenario_type == "I/O-bound HTTP":
+                    exp_type = ExperimentType.HTTP
                 else:
-                    comp_df = build_comparison_table(comparison)
-                    st.dataframe(comp_df, use_container_width=True)
+                    exp_type = ExperimentType.DATABASE
 
-                    for summary in comparison.summaries:
-                        with st.expander(f"Estratégia: {summary.strategy_name}", expanded=True):
-                            c1, c2, c3, c4 = st.columns(4)
-                            c1.metric("Tempo Mediano",
-                                      f"{summary.elapsed.median:.4f}s")
-                            c2.metric(
-                                "Throughput Médio", f"{summary.throughput.average:.2f} tarefas/s")
-
-                            speedup_str = f"{summary.speedup:.2f}x" if summary.speedup is not None else "N/D"
-                            c3.metric("Speedup (vs Sequential)", speedup_str)
-
-                            cpu_avg = summary.cpu_usage_percent.average if summary.cpu_usage_percent else None
-                            mem_avg = summary.memory_usage_mb.average if summary.memory_usage_mb else None
-                            cpu_str = f"{cpu_avg:.1f}%" if cpu_avg is not None else "N/D"
-                            mem_str = f"{mem_avg:.1f} MB" if mem_avg is not None else "N/D"
-                            c4.metric("CPU / Memória",
-                                      f"{cpu_str} / {mem_str}")
-
-                st.markdown("---")
-                st.header("Gráficos Comparativos")
-                render_charts(comparison)
-                render_specialized_plots_and_export(comparison, key_prefix="exec")
+                render_experiment_results(
+                    comparison=comparison,
+                    experiment_type=exp_type,
+                    stocks_map=st.session_state.get("stocks_map"),
+                    initial_stock=config.initial_stock if scenario_type == "Stock / PostgreSQL" else None,
+                    key_prefix="exec",
+                )
             else:
                 st.info(
                     "Configure os parâmetros na barra lateral e clique em 'Executar Experimento' para iniciar.")
@@ -155,6 +182,19 @@ def main():
             selected_label = st.selectbox(
                 "Selecione o experimento para visualizar", options)
 
+            c_del1, c_del2, _ = st.columns([1, 1, 2])
+            with c_del1:
+                if st.button("🗑️ Apagar Selecionado", type="secondary", use_container_width=True):
+                    exp, _, _ = lookup[selected_label]
+                    delete_experiment(exp.id)
+                    st.success("Experimento excluído com sucesso!")
+                    st.rerun()
+            with c_del2:
+                if st.button("💥 Apagar Tudo", type="primary", use_container_width=True):
+                    delete_all_experiments()
+                    st.success("Todo o histórico foi excluído!")
+                    st.rerun()
+
             if selected_label:
                 exp, comp, stocks_map = lookup[selected_label]
 
@@ -170,58 +210,14 @@ def main():
                 st.write(f"**Parâmetros:** {dict(exp.parameters)}")
 
                 st.markdown("---")
-                st.subheader("Resumo dos Resultados Salvos")
 
-                if exp.experiment_type == ExperimentType.DATABASE:
-                    initial_stock = exp.parameters.get("initial_stock", 10)
-                    stock_df = build_stock_table(
-                        comp, stocks_map, initial_stock)
-                    st.dataframe(stock_df, use_container_width=True)
-
-                    for idx, row in stock_df.iterrows():
-                        with st.expander(f"Cenário: {row['Cenário']}", expanded=True):
-                            c1, c2, c3, c4 = st.columns(4)
-                            c1.metric(
-                                "Estoque Inicial -> Final", f"{row['Estoque Inicial']} -> {row['Estoque Final']}")
-                            c2.metric("Aprovadas / Rejeitadas",
-                                      f"{row['Aprovadas']} / {row['Rejeitadas']}")
-                            c3.metric("Tempo Médio",
-                                      f"{row['Tempo Médio (s)']}")
-                            c4.metric(
-                                "Throughput Médio", f"{row['Throughput Médio (tentativas/s)']} tent/s")
-
-                            if row["Inconsistência"] != "Não":
-                                st.error(
-                                    f"Inconsistências detectadas: {row['Inconsistência']}")
-                            else:
-                                st.info(
-                                    "Consistência do estoque mantida com sucesso.")
-                else:
-                    comp_df = build_comparison_table(comp)
-                    st.dataframe(comp_df, use_container_width=True)
-
-                    for summary in comp.summaries:
-                        with st.expander(f"Estratégia: {summary.strategy_name}", expanded=True):
-                            c1, c2, c3, c4 = st.columns(4)
-                            c1.metric("Tempo Mediano",
-                                      f"{summary.elapsed.median:.4f}s")
-                            c2.metric(
-                                "Throughput Médio", f"{summary.throughput.average:.2f} tarefas/s")
-
-                            speedup_str = f"{summary.speedup:.2f}x" if summary.speedup is not None else "N/D"
-                            c3.metric("Speedup (vs Sequential)", speedup_str)
-
-                            cpu_avg = summary.cpu_usage_percent.average if summary.cpu_usage_percent else None
-                            mem_avg = summary.memory_usage_mb.average if summary.memory_usage_mb else None
-                            cpu_str = f"{cpu_avg:.1f}%" if cpu_avg is not None else "N/D"
-                            mem_str = f"{mem_avg:.1f} MB" if mem_avg is not None else "N/D"
-                            c4.metric("CPU / Memória",
-                                      f"{cpu_str} / {mem_str}")
-
-                st.markdown("---")
-                st.subheader("Gráficos do Experimento")
-                render_charts(comp)
-                render_specialized_plots_and_export(comp, key_prefix=f"hist_{exp.id}")
+                render_experiment_results(
+                    comparison=comp,
+                    experiment_type=exp.experiment_type,
+                    stocks_map=stocks_map,
+                    initial_stock=exp.parameters.get("initial_stock"),
+                    key_prefix=f"hist_{exp.id}",
+                )
 
 
 if __name__ == "__main__":

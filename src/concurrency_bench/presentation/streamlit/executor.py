@@ -73,7 +73,8 @@ def save_experiment_to_db(experiment, comparison, stocks_map=None):
                     total_time_seconds=run.total_time_seconds,
                     cpu_usage_percent=run.cpu_usage_percent,
                     memory_usage_mb=run.memory_usage_mb,
-                    metadata=run_meta
+                    metadata=run_meta,
+                    strategy_name=summary.strategy_name
                 )
                 results_to_save.append(run_updated)
 
@@ -87,7 +88,10 @@ def save_experiment_to_db(experiment, comparison, stocks_map=None):
 def rebuild_comparison(experiment, results):
     by_strategy = defaultdict(list)
     for result in results:
-        by_strategy[result.strategy.value].append(result)
+        strat_key = result.strategy_name if result.strategy_name else (
+            result.strategy.value if hasattr(result.strategy, "value") else str(result.strategy)
+        )
+        by_strategy[strat_key].append(result)
 
     summaries = []
     for strategy_name, runs in by_strategy.items():
@@ -133,6 +137,32 @@ def load_experiment_history():
         return output
     except Exception:
         return []
+    finally:
+        engine.dispose()
+
+
+def delete_experiment(experiment_id) -> None:
+    engine = build_engine()
+    try:
+        session_factory = build_session_factory(
+            engine.url.render_as_string(hide_password=False))
+        repository = SqlAlchemyExperimentRepository(session_factory)
+        repository.delete(experiment_id)
+    except Exception:
+        pass
+    finally:
+        engine.dispose()
+
+
+def delete_all_experiments() -> None:
+    engine = build_engine()
+    try:
+        session_factory = build_session_factory(
+            engine.url.render_as_string(hide_password=False))
+        repository = SqlAlchemyExperimentRepository(session_factory)
+        repository.delete_all()
+    except Exception:
+        pass
     finally:
         engine.dispose()
 

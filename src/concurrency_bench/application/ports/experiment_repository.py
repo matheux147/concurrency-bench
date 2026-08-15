@@ -19,3 +19,11 @@ class ExperimentRepository(Protocol):
     def get_by_id(self, experiment_id: UUID) -> Experiment | None:
         """Recupera um experimento ou retorna ``None`` quando não existir."""
         ...
+
+    def delete(self, experiment_id: UUID) -> None:
+        """Remove um experimento específico e seus resultados."""
+        ...
+
+    def delete_all(self) -> None:
+        """Remove todos os experimentos e seus resultados."""
+        ...

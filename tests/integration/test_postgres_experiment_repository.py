@@ -66,6 +66,7 @@ def test_postgres_experiment_repository_saves_and_retrieves(session_factory) -> 
         cpu_usage_percent=12.5,
         memory_usage_mb=45.0,
         metadata={"workers_used": 4},
+        strategy_name="Cenário de Teste 1",
     )
 
     result2 = ExperimentResult(
@@ -97,6 +98,7 @@ def test_postgres_experiment_repository_saves_and_retrieves(session_factory) -> 
     assert thread_res.cpu_usage_percent == pytest.approx(12.5)
     assert thread_res.memory_usage_mb == pytest.approx(45.0)
     assert thread_res.metadata == {"workers_used": 4}
+    assert thread_res.strategy_name == "Cenário de Teste 1"
 
     # List all
     all_exps = repository.list_all()
@@ -104,3 +106,12 @@ def test_postgres_experiment_repository_saves_and_retrieves(session_factory) -> 
     found = next((e for e in all_exps if e[0].id == experiment_id), None)
     assert found is not None
     assert len(found[1]) == 2
+
+    # Delete specific experiment
+    repository.delete(experiment_id)
+    assert repository.get_by_id(experiment_id) is None
+    assert len(repository.get_results_by_experiment_id(experiment_id)) == 0
+
+    # Delete all experiments
+    repository.delete_all()
+    assert len(repository.list_all()) == 0

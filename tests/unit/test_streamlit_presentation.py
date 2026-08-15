@@ -156,3 +156,41 @@ def test_build_stock_table():
     assert df.loc[1, "Rejeitadas"] == 40
     assert df.loc[1, "Estoque Final"] == 0
     assert df.loc[1, "Inconsistência"] == "Não"
+
+
+def test_rebuild_comparison():
+    from concurrency_bench.presentation.streamlit.executor import rebuild_comparison
+    from concurrency_bench.domain.entities import Experiment
+    from concurrency_bench.domain.enums import ExperimentType
+
+    experiment = Experiment(
+        name="Teste Rebuild",
+        experiment_type=ExperimentType.DATABASE,
+        task_count=10,
+        parameters={},
+    )
+
+    r1 = ExperimentResult(
+        experiment_name="Teste Rebuild",
+        strategy=ExecutionStrategy.THREADS,
+        task_count=10,
+        completed_task_count=5,
+        total_time_seconds=0.1,
+        strategy_name="Cenário A",
+    )
+    r2 = ExperimentResult(
+        experiment_name="Teste Rebuild",
+        strategy=ExecutionStrategy.THREADS,
+        task_count=10,
+        completed_task_count=6,
+        total_time_seconds=0.2,
+        strategy_name="Cenário B",
+    )
+
+    comp = rebuild_comparison(experiment, [r1, r2])
+    assert comp.scenario_name == "Teste Rebuild"
+    assert len(comp.summaries) == 2
+
+    summary_names = [s.strategy_name for s in comp.summaries]
+    assert "Cenário A" in summary_names
+    assert "Cenário B" in summary_names
