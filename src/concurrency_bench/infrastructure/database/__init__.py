@@ -1,17 +1,17 @@
-from concurrency_lab.infrastructure.database.base import Base
-from concurrency_lab.infrastructure.database.models import (
+from concurrency_bench.infrastructure.database.base import Base
+from concurrency_bench.infrastructure.database.models import (
     ProductModel,
     PurchaseModel,
     ExperimentModel,
     ExperimentResultModel,
 )
-from concurrency_lab.infrastructure.database.product_repository import (
+from concurrency_bench.infrastructure.database.product_repository import (
     SqlAlchemyProductRepository,
 )
-from concurrency_lab.infrastructure.database.experiment_repository import (
+from concurrency_bench.infrastructure.database.experiment_repository import (
     SqlAlchemyExperimentRepository,
 )
-from concurrency_lab.infrastructure.database.session import (
+from concurrency_bench.infrastructure.database.session import (
     build_engine,
     build_session_factory,
     reset_schema,

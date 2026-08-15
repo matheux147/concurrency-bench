@@ -5,9 +5,9 @@ from uuid import UUID
 from sqlalchemy import select
 from sqlalchemy.orm import Session, sessionmaker
 
-from concurrency_lab.application.ports import ProductRepository
-from concurrency_lab.domain.entities import Product
-from concurrency_lab.infrastructure.database.models import ProductModel, PurchaseModel
+from concurrency_bench.application.ports import ProductRepository
+from concurrency_bench.domain.entities import Product
+from concurrency_bench.infrastructure.database.models import ProductModel, PurchaseModel
 
 
 class SqlAlchemyProductRepository(ProductRepository):

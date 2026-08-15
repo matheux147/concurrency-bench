@@ -3,18 +3,18 @@ from __future__ import annotations
 import pytest
 from sqlalchemy.exc import OperationalError
 
-from concurrency_lab.application.use_cases import PurchaseProduct, RunExperiment
-from concurrency_lab.domain.entities import Experiment, Product
-from concurrency_lab.domain.enums import ExperimentType
-from concurrency_lab.infrastructure.concurrency import ThreadStrategy
-from concurrency_lab.infrastructure.database import (
+from concurrency_bench.application.use_cases import PurchaseProduct, RunExperiment
+from concurrency_bench.domain.entities import Experiment, Product
+from concurrency_bench.domain.enums import ExperimentType
+from concurrency_bench.infrastructure.concurrency import ThreadStrategy
+from concurrency_bench.infrastructure.database import (
     ProductModel,
     build_engine,
     build_session_factory,
     reset_schema,
 )
-from concurrency_lab.infrastructure.stock import build_purchase_tasks
-from concurrency_lab.infrastructure.database.product_repository import SqlAlchemyProductRepository
+from concurrency_bench.infrastructure.stock import build_purchase_tasks
+from concurrency_bench.infrastructure.database.product_repository import SqlAlchemyProductRepository
 
 
 @pytest.fixture(scope="module")
@@ -82,7 +82,8 @@ def test_postgres_concurrent_purchases_remain_consistent(session_factory) -> Non
         task_count=50,
     )
 
-    result = RunExperiment(ThreadStrategy(max_workers=10)).execute(experiment, tasks)
+    result = RunExperiment(ThreadStrategy(max_workers=10)
+                           ).execute(experiment, tasks)
     approved = sum(result.metadata["completed_results"])
 
     final_stock = repository.get_stock(product.id)
@@ -108,7 +109,8 @@ def test_postgres_concurrent_purchases_without_lock_allows_inconsistency(session
         task_count=50,
     )
 
-    result = RunExperiment(ThreadStrategy(max_workers=10)).execute(experiment, tasks)
+    result = RunExperiment(ThreadStrategy(max_workers=10)
+                           ).execute(experiment, tasks)
     approved = sum(result.metadata["completed_results"])
 
     final_stock = repository.get_stock(product.id)

@@ -2,7 +2,7 @@ import asyncio
 
 import pytest
 
-from concurrency_lab.infrastructure.concurrency import AsyncStrategy
+from concurrency_bench.infrastructure.concurrency import AsyncStrategy
 
 
 async def _failing_async_task() -> int:

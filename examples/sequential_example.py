@@ -1,7 +1,7 @@
-from concurrency_lab.application.use_cases import RunExperiment
-from concurrency_lab.domain.entities import Experiment
-from concurrency_lab.domain.enums import ExperimentType
-from concurrency_lab.infrastructure.concurrency import SequentialStrategy
+from concurrency_bench.application.use_cases import RunExperiment
+from concurrency_bench.domain.entities import Experiment
+from concurrency_bench.domain.enums import ExperimentType
+from concurrency_bench.infrastructure.concurrency import SequentialStrategy
 
 
 def main() -> None:
@@ -15,7 +15,8 @@ def main() -> None:
     result = RunExperiment(SequentialStrategy()).execute(experiment, tasks)
     print(f"Experimento: {result.experiment_name}")
     print(f"Estratégia: {result.strategy.value}")
-    print(f"Tarefas concluídas: {result.completed_task_count}/{result.task_count}")
+    print(
+        f"Tarefas concluídas: {result.completed_task_count}/{result.task_count}")
     print(f"Tempo total: {result.total_time_seconds:.9f}s")
     print(f"Resultados: {result.metadata['completed_results']}")
 

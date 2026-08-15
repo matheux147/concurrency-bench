@@ -7,7 +7,7 @@ from sqlalchemy import DateTime, ForeignKey, Integer, String, Float
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.types import Uuid
 
-from concurrency_lab.infrastructure.database.base import Base
+from concurrency_bench.infrastructure.database.base import Base
 
 
 class ProductModel(Base):
@@ -21,7 +21,8 @@ class ProductModel(Base):
 class PurchaseModel(Base):
     __tablename__ = "purchases"
 
-    id: Mapped[UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid4)
+    id: Mapped[UUID] = mapped_column(
+        Uuid(as_uuid=True), primary_key=True, default=uuid4)
     product_id: Mapped[UUID] = mapped_column(
         Uuid(as_uuid=True),
         ForeignKey("products.id", ondelete="CASCADE"),
@@ -43,7 +44,8 @@ class ExperimentModel(Base):
     task_count: Mapped[int] = mapped_column(Integer, nullable=False)
     description: Mapped[str | None] = mapped_column(String, nullable=True)
     parameters_json: Mapped[str] = mapped_column(String, nullable=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False)
 
     results: Mapped[list[ExperimentResultModel]] = relationship(
         "ExperimentResultModel",
@@ -55,7 +57,8 @@ class ExperimentModel(Base):
 class ExperimentResultModel(Base):
     __tablename__ = "experiment_results"
 
-    id: Mapped[UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid4)
+    id: Mapped[UUID] = mapped_column(
+        Uuid(as_uuid=True), primary_key=True, default=uuid4)
     experiment_id: Mapped[UUID] = mapped_column(
         Uuid(as_uuid=True),
         ForeignKey("experiments.id", ondelete="CASCADE"),
@@ -64,7 +67,8 @@ class ExperimentResultModel(Base):
     strategy: Mapped[str] = mapped_column(String(50), nullable=False)
     completed_task_count: Mapped[int] = mapped_column(Integer, nullable=False)
     total_time_seconds: Mapped[float] = mapped_column(Float, nullable=False)
-    cpu_usage_percent: Mapped[float | None] = mapped_column(Float, nullable=True)
+    cpu_usage_percent: Mapped[float | None] = mapped_column(
+        Float, nullable=True)
     memory_usage_mb: Mapped[float | None] = mapped_column(Float, nullable=True)
     workers_used: Mapped[int | None] = mapped_column(Integer, nullable=True)
     speedup: Mapped[float | None] = mapped_column(Float, nullable=True)

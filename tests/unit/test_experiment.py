@@ -1,8 +1,8 @@
 import pytest
 
-from concurrency_lab.domain.entities import Experiment
-from concurrency_lab.domain.enums import ExperimentType
-from concurrency_lab.domain.exceptions import DomainValidationError
+from concurrency_bench.domain.entities import Experiment
+from concurrency_bench.domain.enums import ExperimentType
+from concurrency_bench.domain.exceptions import DomainValidationError
 
 
 def test_experiment_keeps_identity_and_makes_parameters_immutable() -> None:

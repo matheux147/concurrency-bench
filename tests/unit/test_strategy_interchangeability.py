@@ -1,12 +1,12 @@
-from concurrency_lab.application.use_cases import RunExperiment
-from concurrency_lab.domain.entities import Experiment
-from concurrency_lab.domain.enums import ExperimentType, ExecutionStrategy
-from concurrency_lab.infrastructure.concurrency import (
+from concurrency_bench.application.use_cases import RunExperiment
+from concurrency_bench.domain.entities import Experiment
+from concurrency_bench.domain.enums import ExperimentType, ExecutionStrategy
+from concurrency_bench.infrastructure.concurrency import (
     ProcessStrategy,
     SequentialStrategy,
     ThreadStrategy,
 )
-from concurrency_lab.infrastructure.workloads import build_cpu_bound_tasks
+from concurrency_bench.infrastructure.workloads import build_cpu_bound_tasks
 
 
 def test_run_experiment_accepts_all_current_strategies() -> None:

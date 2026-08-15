@@ -5,8 +5,8 @@ from threading import Lock
 from time import sleep
 from uuid import UUID
 
-from concurrency_lab.application.ports import ProductRepository
-from concurrency_lab.domain.entities import Product
+from concurrency_bench.application.ports import ProductRepository
+from concurrency_bench.domain.entities import Product
 
 
 @dataclass(slots=True)

@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from concurrency_lab.application.ports import ProductRepository
+from concurrency_bench.application.ports import ProductRepository
 
 
 class PurchaseProduct:

@@ -4,10 +4,11 @@ from datetime import datetime, timezone
 from sqlalchemy import select
 from sqlalchemy.orm import Session, sessionmaker
 
-from concurrency_lab.application.ports.experiment_repository import ExperimentRepository
-from concurrency_lab.domain.entities import Experiment, ExperimentResult
-from concurrency_lab.domain.enums import ExperimentType, ExecutionStrategy
-from concurrency_lab.infrastructure.database.models import ExperimentModel, ExperimentResultModel
+from concurrency_bench.application.ports.experiment_repository import ExperimentRepository
+from concurrency_bench.domain.entities import Experiment, ExperimentResult
+from concurrency_bench.domain.enums import ExperimentType, ExecutionStrategy
+from concurrency_bench.infrastructure.database.models import ExperimentModel, ExperimentResultModel
+
 
 class SqlAlchemyExperimentRepository(ExperimentRepository):
     def __init__(self, session_factory: sessionmaker[Session]) -> None:
@@ -18,7 +19,7 @@ class SqlAlchemyExperimentRepository(ExperimentRepository):
             with session.begin():
                 existing = session.get(ExperimentModel, experiment.id)
                 params_str = json.dumps(dict(experiment.parameters))
-                
+
                 if existing is None:
                     session.add(
                         ExperimentModel(
@@ -76,9 +77,10 @@ class SqlAlchemyExperimentRepository(ExperimentRepository):
 
     def list_all(self) -> list[tuple[Experiment, list[ExperimentResult]]]:
         with self._session_factory() as session:
-            statement = select(ExperimentModel).order_by(ExperimentModel.created_at.desc())
+            statement = select(ExperimentModel).order_by(
+                ExperimentModel.created_at.desc())
             rows = session.execute(statement).scalars().all()
-            
+
             output = []
             for row in rows:
                 exp = self._to_domain_experiment(row)
@@ -88,7 +90,8 @@ class SqlAlchemyExperimentRepository(ExperimentRepository):
 
     def _to_domain_experiment(self, row: ExperimentModel) -> Experiment:
         params = json.loads(row.parameters_json)
-        created_at = row.created_at.replace(tzinfo=timezone.utc) if row.created_at.tzinfo is None else row.created_at
+        created_at = row.created_at.replace(
+            tzinfo=timezone.utc) if row.created_at.tzinfo is None else row.created_at
         return Experiment(
             id=row.id,
             name=row.name,
@@ -101,12 +104,12 @@ class SqlAlchemyExperimentRepository(ExperimentRepository):
 
     def _to_domain_result(self, row: ExperimentResultModel) -> ExperimentResult:
         meta = json.loads(row.metadata_json)
-        
+
         # Ensure we add database-loaded workers_used & speedup to the metadata dictionary if needed
         # We also need to get experiment name, which we can fetch or use generic
         # To fetch, we can use row.experiment.name
         exp_name = row.experiment.name if row.experiment else "Persistência"
-        
+
         # Ensure correct strategy mapping
         strategy_val = row.strategy
         if strategy_val == "threads":
@@ -117,7 +120,7 @@ class SqlAlchemyExperimentRepository(ExperimentRepository):
             strategy = ExecutionStrategy.ASYNC
         else:
             strategy = ExecutionStrategy.SEQUENTIAL
-            
+
         return ExperimentResult(
             experiment_name=exp_name,
             strategy=strategy,
