@@ -79,6 +79,23 @@ def render_experiment_results(
                 c4.metric("CPU / Memória",
                           f"{cpu_str} / {mem_str}")
 
+    if experiment_type == ExperimentType.CPU_BOUND:
+        st.info(
+            """
+            **Análise Teórica - O Impacto do GIL (Global Interpreter Lock):**
+            *   **Threads vs. Sequencial**: Em tarefas intensivas de CPU (CPU-bound), note que a estratégia de **Threads** apresenta desempenho muito próximo (ou até pior devido ao overhead de troca de contexto) do modelo **Sequencial**. Isso ocorre por causa do **GIL**, uma trava no interpretador CPython que restringe a execução de bytecode Python a apenas uma thread por vez, mesmo em processadores multinúcleo.
+            *   **Processos (Paralelismo Real)**: A estratégia de **Processos** contorna o GIL criando processos separados, cada um com seu próprio interpretador Python e memória independente. Isso permite distribuir a carga de processamento matemático paralelamente pelos núcleos físicos da máquina, gerando um ganho de velocidade (speedup) proporcional ao número de cores configurados.
+            """
+        )
+    elif experiment_type == ExperimentType.HTTP:
+        st.info(
+            """
+            **Análise Teórica - Comportamento do GIL em I/O-Bound:**
+            *   **Liberação do GIL**: Em operações de I/O (como requisições de rede HTTP), o interpretador Python libera o GIL durante a espera bloqueante de rede.
+            *   **Threads e Async**: Por essa razão, tanto a programação assíncrona (`Async`) quanto a concorrência via `Threads` obtêm um excelente desempenho com alto throughput, já que múltiplos fluxos concorrentes podem progredir de forma eficiente enquanto aguardam os pacotes de rede, sem serem bloqueados pelo GIL.
+            """
+        )
+
     st.markdown("---")
     st.header("Gráficos Comparativos")
     render_charts(comparison)

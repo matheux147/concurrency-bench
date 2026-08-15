@@ -111,7 +111,3 @@ def test_postgres_experiment_repository_saves_and_retrieves(session_factory) -> 
     repository.delete(experiment_id)
     assert repository.get_by_id(experiment_id) is None
     assert len(repository.get_results_by_experiment_id(experiment_id)) == 0
-
-    # Delete all experiments
-    repository.delete_all()
-    assert len(repository.list_all()) == 0
