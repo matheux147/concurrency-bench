@@ -1,10 +1,10 @@
 from collections.abc import Sequence
 
-from concurrency_lab.application.strategies import ExecutionReport, Task
-from concurrency_lab.application.use_cases import RunExperiment
-from concurrency_lab.domain.entities import Experiment, ExperimentResult
-from concurrency_lab.domain.enums import ExperimentType
-import concurrency_lab.domain.enums as domain_enums
+from concurrency_bench.application.strategies import ExecutionReport, Task
+from concurrency_bench.application.use_cases import RunExperiment
+from concurrency_bench.domain.entities import Experiment, ExperimentResult
+from concurrency_bench.domain.enums import ExperimentType
+import concurrency_bench.domain.enums as domain_enums
 
 
 class FakeStrategy:
@@ -52,4 +52,5 @@ def test_run_experiment_rejects_task_count_mismatch() -> None:
     except ValueError as error:
         assert "corresponder" in str(error)
     else:
-        raise AssertionError("Era esperado erro para quantidade de tarefas inconsistente")
+        raise AssertionError(
+            "Era esperado erro para quantidade de tarefas inconsistente")

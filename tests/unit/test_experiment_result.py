@@ -1,8 +1,8 @@
 import pytest
 
-from concurrency_lab.domain.entities import ExperimentResult
-from concurrency_lab.domain.enums import ExecutionStrategy
-from concurrency_lab.domain.exceptions import DomainValidationError
+from concurrency_bench.domain.entities import ExperimentResult
+from concurrency_bench.domain.enums import ExecutionStrategy
+from concurrency_bench.domain.exceptions import DomainValidationError
 
 
 def test_result_calculates_throughput_and_average_time() -> None:

@@ -4,11 +4,11 @@ from itertools import count
 
 import pytest
 
-from concurrency_lab.application.benchmarks import BenchmarkComparison, BenchmarkRunner, BenchmarkSummary, StatisticalSummary
-from concurrency_lab.domain.entities import ExperimentResult
-from concurrency_lab.domain.enums import ExecutionStrategy
-from concurrency_lab.infrastructure.monitoring import ProcessSample, build_process_usage
-from concurrency_lab.infrastructure.monitoring import process_measurement as measurement_module
+from concurrency_bench.application.benchmarks import BenchmarkComparison, BenchmarkRunner, BenchmarkSummary, StatisticalSummary
+from concurrency_bench.domain.entities import ExperimentResult
+from concurrency_bench.domain.enums import ExecutionStrategy
+from concurrency_bench.infrastructure.monitoring import ProcessSample, build_process_usage
+from concurrency_bench.infrastructure.monitoring import process_measurement as measurement_module
 
 
 def _result(total_time_seconds: float, *, workers_used: int | None = None) -> ExperimentResult:
@@ -40,7 +40,8 @@ def test_statistical_summary_calculates_average_median_min_max_and_stddev() -> N
 def test_benchmark_summary_aggregates_raw_results() -> None:
     summary = BenchmarkSummary.from_results(
         "threads",
-        [_result(1.0, workers_used=4), _result(2.0, workers_used=4), _result(3.0, workers_used=4)],
+        [_result(1.0, workers_used=4), _result(
+            2.0, workers_used=4), _result(3.0, workers_used=4)],
     )
 
     assert summary.strategy_name == "threads"
@@ -64,7 +65,8 @@ def test_benchmark_runner_discards_warmup_runs() -> None:
 
     assert summary.strategy_name == "threads"
     assert len(summary.runs) == 3
-    assert [result.total_time_seconds for result in summary.runs] == [2.0, 3.0, 4.0]
+    assert [result.total_time_seconds for result in summary.runs] == [
+        2.0, 3.0, 4.0]
     assert summary.elapsed.median == pytest.approx(3.0)
     assert summary.workers_used == 2
 
@@ -76,7 +78,8 @@ def test_benchmark_comparison_applies_speedup_against_baseline() -> None:
     )
     faster = BenchmarkSummary.from_results(
         "threads",
-        [_result(2.0, workers_used=4), _result(2.0, workers_used=4), _result(2.0, workers_used=4)],
+        [_result(2.0, workers_used=4), _result(
+            2.0, workers_used=4), _result(2.0, workers_used=4)],
     )
 
     comparison = BenchmarkComparison.from_summaries(
@@ -91,7 +94,8 @@ def test_benchmark_comparison_applies_speedup_against_baseline() -> None:
 
 
 def test_benchmark_comparison_without_baseline_keeps_speedup_empty() -> None:
-    summary = BenchmarkSummary.from_results("threads", [_result(1.0, workers_used=4)])
+    summary = BenchmarkSummary.from_results(
+        "threads", [_result(1.0, workers_used=4)])
 
     comparison = BenchmarkComparison.from_summaries(
         scenario_name="cpu",
@@ -128,17 +132,21 @@ def test_process_measurement_measures_duration_and_usage(monkeypatch: pytest.Mon
     after = ProcessSample(cpu_time_seconds=3.0, rss_bytes=14 * 1024 * 1024)
     times = iter([10.0, 13.0])
 
-    monkeypatch.setattr(measurement_module, "capture_process_usage", lambda: before)
-    monkeypatch.setattr(measurement_module, "perf_counter", lambda: next(times))
+    monkeypatch.setattr(measurement_module,
+                        "capture_process_usage", lambda: before)
+    monkeypatch.setattr(measurement_module, "perf_counter",
+                        lambda: next(times))
     monkeypatch.setattr(measurement_module, "cpu_count", lambda: 2)
-    monkeypatch.setattr(measurement_module, "capture_process_usage", lambda: before)
+    monkeypatch.setattr(measurement_module,
+                        "capture_process_usage", lambda: before)
 
     def fake_capture() -> ProcessSample:
         calls = getattr(fake_capture, "calls", 0)
         setattr(fake_capture, "calls", calls + 1)
         return before if calls == 0 else after
 
-    monkeypatch.setattr(measurement_module, "capture_process_usage", fake_capture)
+    monkeypatch.setattr(measurement_module,
+                        "capture_process_usage", fake_capture)
 
     measurement = measurement_module.ProcessMeasurement()
     result, elapsed_seconds, usage = measurement.measure(lambda: "ok")

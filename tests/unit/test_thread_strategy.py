@@ -1,6 +1,6 @@
 import pytest
 
-from concurrency_lab.infrastructure.concurrency import ThreadStrategy
+from concurrency_bench.infrastructure.concurrency import ThreadStrategy
 
 
 def double(value: int) -> int:

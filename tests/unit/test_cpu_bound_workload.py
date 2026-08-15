@@ -1,6 +1,6 @@
 import pytest
 
-from concurrency_lab.infrastructure.workloads import build_cpu_bound_tasks, cpu_bound_work
+from concurrency_bench.infrastructure.workloads import build_cpu_bound_tasks, cpu_bound_work
 
 
 def test_cpu_bound_work_is_deterministic() -> None:

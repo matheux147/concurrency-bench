@@ -1,8 +1,8 @@
 from collections.abc import Sequence
 
-from concurrency_lab.application.strategies import ExecutionStrategy, Task
-from concurrency_lab.domain.entities import Experiment, ExperimentResult
-from concurrency_lab.infrastructure.monitoring import ProcessMeasurement
+from concurrency_bench.application.strategies import ExecutionStrategy, Task
+from concurrency_bench.domain.entities import Experiment, ExperimentResult
+from concurrency_bench.infrastructure.monitoring import ProcessMeasurement
 
 
 class RunExperiment:
@@ -16,7 +16,8 @@ class RunExperiment:
         """Executa as tarefas e devolve as métricas básicas do experimento."""
 
         if len(tasks) != experiment.task_count:
-            raise ValueError("A quantidade de tarefas deve corresponder ao experimento.")
+            raise ValueError(
+                "A quantidade de tarefas deve corresponder ao experimento.")
 
         report, elapsed_seconds, usage = self._measurement.measure(
             lambda: self._strategy.execute(tasks)

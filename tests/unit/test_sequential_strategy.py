@@ -1,7 +1,7 @@
 import pytest
 
-from concurrency_lab.domain.exceptions import DomainValidationError
-from concurrency_lab.infrastructure.concurrency import SequentialStrategy
+from concurrency_bench.domain.exceptions import DomainValidationError
+from concurrency_bench.infrastructure.concurrency import SequentialStrategy
 
 
 def test_sequential_strategy_executes_all_tasks_in_order() -> None:
@@ -14,7 +14,8 @@ def test_sequential_strategy_executes_all_tasks_in_order() -> None:
 
         return task
 
-    report = SequentialStrategy().execute([make_task(1), make_task(2), make_task(3)])
+    report = SequentialStrategy().execute(
+        [make_task(1), make_task(2), make_task(3)])
 
     assert execution_order == [1, 2, 3]
     assert report.completed_results == (2, 4, 6)

@@ -1,7 +1,7 @@
 import pytest
 from functools import partial
 
-from concurrency_lab.infrastructure.concurrency import ProcessStrategy
+from concurrency_bench.infrastructure.concurrency import ProcessStrategy
 
 
 def triple(value: int) -> int:
