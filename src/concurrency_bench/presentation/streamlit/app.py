@@ -8,6 +8,7 @@ from concurrency_bench.presentation.streamlit.executor import (
     run_cpu_bound_experiment,
     run_io_bound_experiment,
     run_stock_experiment,
+    run_cache_experiment,
     load_experiment_history,
     delete_experiment,
     delete_all_experiments,
@@ -15,6 +16,7 @@ from concurrency_bench.presentation.streamlit.executor import (
 from concurrency_bench.presentation.streamlit.tables import (
     build_comparison_table,
     build_stock_table,
+    build_cache_table,
 )
 from concurrency_bench.presentation.streamlit.charts import (
     render_charts,
@@ -27,6 +29,8 @@ def render_experiment_results(
     experiment_type: ExperimentType,
     stocks_map: dict[str, int] | None = None,
     initial_stock: int | None = None,
+    cache_hits_map: dict[str, int] | None = None,
+    cache_misses_map: dict[str, int] | None = None,
     key_prefix: str = "",
 ):
     st.header("Resumo dos Resultados")
@@ -57,6 +61,22 @@ def render_experiment_results(
                 else:
                     st.info(
                         "Consistência do estoque mantida com sucesso.")
+    elif experiment_type == ExperimentType.CACHE:
+        cache_df = build_cache_table(
+            comparison, cache_hits_map or {}, cache_misses_map or {})
+
+        st.dataframe(cache_df, use_container_width=True)
+
+        for idx, row in cache_df.iterrows():
+            with st.expander(f"Cenário: {row['Cenário']}", expanded=True):
+                c1, c2, c3, c4 = st.columns(4)
+                c1.metric(
+                    "Cache Hits / Misses (DB)", f"{row['Cache Hits']} / {row['Cache Misses (DB Hits)']}")
+                c2.metric("Hit Ratio", f"{row['Hit Ratio (%)']}")
+                c3.metric("Tempo Médio",
+                          f"{row['Tempo Médio (s)']}")
+                c4.metric(
+                    "Throughput Médio", f"{row['Throughput Médio (reqs/s)']} req/s")
     else:
         comp_df = build_comparison_table(comparison)
         st.dataframe(comp_df, use_container_width=True)
@@ -135,6 +155,8 @@ def main():
                 st.session_state["last_scenario"] = scenario_type
                 st.session_state["results"] = None
                 st.session_state["stocks_map"] = None
+                st.session_state["cache_hits_map"] = None
+                st.session_state["cache_misses_map"] = None
 
                 with st.spinner("Executando o benchmark, por favor aguarde..."):
                     try:
@@ -149,6 +171,12 @@ def main():
                                 config)
                             st.session_state["results"] = comparison
                             st.session_state["stocks_map"] = stocks_map
+                        elif scenario_type == "Cache / Memória":
+                            comparison, cache_hits_map, cache_misses_map = run_cache_experiment(
+                                config)
+                            st.session_state["results"] = comparison
+                            st.session_state["cache_hits_map"] = cache_hits_map
+                            st.session_state["cache_misses_map"] = cache_misses_map
                     except Exception as e:
                         st.error(
                             "Ocorreu um erro durante a execução do experimento.")
@@ -168,6 +196,8 @@ def main():
                     exp_type = ExperimentType.CPU_BOUND
                 elif scenario_type == "I/O-bound HTTP":
                     exp_type = ExperimentType.HTTP
+                elif scenario_type == "Cache / Memória":
+                    exp_type = ExperimentType.CACHE
                 else:
                     exp_type = ExperimentType.DATABASE
 
@@ -176,6 +206,8 @@ def main():
                     experiment_type=exp_type,
                     stocks_map=st.session_state.get("stocks_map"),
                     initial_stock=config.initial_stock if scenario_type == "Stock / PostgreSQL" else None,
+                    cache_hits_map=st.session_state.get("cache_hits_map"),
+                    cache_misses_map=st.session_state.get("cache_misses_map"),
                     key_prefix="exec",
                 )
             else:
@@ -191,10 +223,10 @@ def main():
         else:
             options = []
             lookup = {}
-            for exp, comp, stocks_map in history:
+            for exp, comp, stocks_map, cache_hits, cache_misses in history:
                 label = f"[{exp.experiment_type.value.upper()}] - {exp.name} ({exp.created_at.strftime('%Y-%m-%d %H:%M:%S')} UTC) - ID: {str(exp.id)[:8]}"
                 options.append(label)
-                lookup[label] = (exp, comp, stocks_map)
+                lookup[label] = (exp, comp, stocks_map, cache_hits, cache_misses)
 
             selected_label = st.selectbox(
                 "Selecione o experimento para visualizar", options)
@@ -202,7 +234,7 @@ def main():
             c_del1, c_del2, _ = st.columns([1, 1, 2])
             with c_del1:
                 if st.button("🗑️ Apagar Selecionado", type="secondary", use_container_width=True):
-                    exp, _, _ = lookup[selected_label]
+                    exp, _, _, _, _ = lookup[selected_label]
                     delete_experiment(exp.id)
                     st.success("Experimento excluído com sucesso!")
                     st.rerun()
@@ -213,7 +245,7 @@ def main():
                     st.rerun()
 
             if selected_label:
-                exp, comp, stocks_map = lookup[selected_label]
+                exp, comp, stocks_map, cache_hits, cache_misses = lookup[selected_label]
 
                 st.markdown("### Detalhes do Experimento")
                 c1, c2, c3 = st.columns(3)
@@ -233,6 +265,8 @@ def main():
                     experiment_type=exp.experiment_type,
                     stocks_map=stocks_map,
                     initial_stock=exp.parameters.get("initial_stock"),
+                    cache_hits_map=cache_hits,
+                    cache_misses_map=cache_misses,
                     key_prefix=f"hist_{exp.id}",
                 )
 

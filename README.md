@@ -306,6 +306,20 @@ Permite visualizar:
 - sincronização;
 - Lock.
 
+### Experimento de Otimização e Concorrência de Cache
+
+```powershell
+python examples/cache_concurrency_comparison.py
+```
+
+Permite analisar:
+
+- Cache Stampede (Thundering Herd);
+- Otimização de I/O em memória;
+- Cache Frio (vazio) vs. Cache Quente (preenchido);
+- Cache sem Lock (múltiplas consultas redundantes);
+- Cache com Lock (sincronização de recursos).
+
 ---
 
 ## 8. Dashboard Streamlit

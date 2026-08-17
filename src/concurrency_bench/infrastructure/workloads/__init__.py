@@ -7,6 +7,10 @@ from concurrency_bench.infrastructure.workloads.http_io import (
     build_http_async_tasks,
     build_http_sync_tasks,
 )
+from concurrency_bench.infrastructure.workloads.cache import (
+    InMemoryCache,
+    build_cache_tasks,
+)
 
 __all__ = [
     "HttpRequestPlan",
@@ -14,4 +18,6 @@ __all__ = [
     "build_http_async_tasks",
     "build_http_sync_tasks",
     "cpu_bound_work",
+    "InMemoryCache",
+    "build_cache_tasks",
 ]
