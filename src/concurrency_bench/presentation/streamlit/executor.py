@@ -1,5 +1,7 @@
 import asyncio
 import json
+import time
+import threading
 from collections import defaultdict
 from dataclasses import replace
 from concurrent.futures import ThreadPoolExecutor
@@ -21,6 +23,8 @@ from concurrency_bench.infrastructure.workloads import (
     HttpRequestPlan,
     build_http_sync_tasks,
     build_http_async_tasks,
+    InMemoryCache,
+    build_cache_tasks,
 )
 from concurrency_bench.infrastructure.http import LocalDelayServer
 from concurrency_bench.infrastructure.database import (
@@ -46,7 +50,7 @@ def run_async_safe(coro):
         return asyncio.run(coro)
 
 
-def save_experiment_to_db(experiment, comparison, stocks_map=None):
+def save_experiment_to_db(experiment, comparison, stocks_map=None, cache_hits_map=None, cache_misses_map=None):
     engine = build_engine()
     try:
         reset_schema(engine)
@@ -64,6 +68,10 @@ def save_experiment_to_db(experiment, comparison, stocks_map=None):
                 run_meta["workers_used"] = summary.workers_used
                 if stocks_map and summary.strategy_name in stocks_map:
                     run_meta["final_stock"] = stocks_map[summary.strategy_name]
+                if cache_hits_map and summary.strategy_name in cache_hits_map:
+                    run_meta["cache_hits"] = cache_hits_map[summary.strategy_name]
+                if cache_misses_map and summary.strategy_name in cache_misses_map:
+                    run_meta["cache_misses"] = cache_misses_map[summary.strategy_name]
 
                 run_updated = ExperimentResult(
                     experiment_name=run.experiment_name,
@@ -125,15 +133,21 @@ def load_experiment_history():
         output = []
         for exp, results in history:
             comp = rebuild_comparison(exp, results)
-            # Rebuild stocks_map if any
+            # Rebuild stocks_map & cache maps if any
             stocks_map = {}
+            cache_hits_map = {}
+            cache_misses_map = {}
             for summary in comp.summaries:
                 if summary.runs:
                     last_run = summary.runs[-1]
                     if "final_stock" in last_run.metadata:
                         stocks_map[summary.strategy_name] = last_run.metadata["final_stock"]
+                    if "cache_hits" in last_run.metadata:
+                        cache_hits_map[summary.strategy_name] = last_run.metadata["cache_hits"]
+                    if "cache_misses" in last_run.metadata:
+                        cache_misses_map[summary.strategy_name] = last_run.metadata["cache_misses"]
 
-            output.append((exp, comp, stocks_map))
+            output.append((exp, comp, stocks_map, cache_hits_map, cache_misses_map))
         return output
     except Exception:
         return []
@@ -427,3 +441,120 @@ def run_stock_experiment(config):
     stocks_map = {r[0].strategy_name: r[1] for r in results}
     save_experiment_to_db(experiment, comparison, stocks_map)
     return comparison, stocks_map
+
+
+def run_cache_experiment(config):
+    runner = BenchmarkRunner(repetitions=config.repetitions, warmup_runs=1)
+    experiment = Experiment(
+        name="Comparativo de Consistência e Otimização de Cache",
+        experiment_type=ExperimentType.CACHE,
+        task_count=config.attempt_count,
+        parameters={
+            "delay_ms": config.delay_ms,
+            "attempt_count": config.attempt_count,
+            "max_workers": config.max_workers,
+            "repetitions": config.repetitions,
+        }
+    )
+
+    results = []
+    delay_sec = config.delay_ms / 1000.0
+
+    if "Sem Cache" in config.scenarios:
+        class NoCache:
+            def __init__(self, delay: float):
+                self.delay = delay
+                self.hits = 0
+                self.misses = 0
+                self._lock = threading.Lock()
+            def get(self, key: str) -> str:
+                with self._lock:
+                    self.misses += 1
+                time.sleep(self.delay)
+                return f"val_{key}"
+
+        no_cache_obj = NoCache(delay_sec)
+
+        def execute_once_no_cache():
+            no_cache_obj.hits = 0
+            no_cache_obj.misses = 0
+            tasks = [lambda: no_cache_obj.get("key") for _ in range(config.attempt_count)]
+            result = RunExperiment(ThreadStrategy(max_workers=config.max_workers)).execute(experiment, tasks)
+            new_meta = dict(result.metadata)
+            new_meta["cache_hits"] = no_cache_obj.hits
+            new_meta["cache_misses"] = no_cache_obj.misses
+            return replace(result, metadata=new_meta)
+
+        summary = runner.run(strategy_name="Sem Cache", execute_once=execute_once_no_cache)
+        results.append((summary, 0, config.attempt_count))
+
+    if "Cache sem Lock" in config.scenarios:
+        # Frio
+        cache_frio = InMemoryCache(use_lock=False, delay_seconds=delay_sec)
+        def execute_once_frio():
+            cache_frio.clear()
+            tasks = build_cache_tasks(cache_frio, "key", config.attempt_count)
+            result = RunExperiment(ThreadStrategy(max_workers=config.max_workers)).execute(experiment, tasks)
+            new_meta = dict(result.metadata)
+            new_meta["cache_hits"] = cache_frio.hits
+            new_meta["cache_misses"] = cache_frio.misses
+            return replace(result, metadata=new_meta)
+        summary_frio = runner.run(strategy_name="Cache sem Lock (Frio)", execute_once=execute_once_frio)
+        results.append((summary_frio, cache_frio.hits, cache_frio.misses))
+
+        # Quente
+        cache_quente = InMemoryCache(use_lock=False, delay_seconds=delay_sec)
+        def execute_once_quente():
+            cache_quente.clear()
+            cache_quente.get("key") # populate
+            cache_quente.reset_counters()
+            tasks = build_cache_tasks(cache_quente, "key", config.attempt_count)
+            result = RunExperiment(ThreadStrategy(max_workers=config.max_workers)).execute(experiment, tasks)
+            new_meta = dict(result.metadata)
+            new_meta["cache_hits"] = cache_quente.hits
+            new_meta["cache_misses"] = cache_quente.misses
+            return replace(result, metadata=new_meta)
+        summary_quente = runner.run(strategy_name="Cache sem Lock (Quente)", execute_once=execute_once_quente)
+        results.append((summary_quente, cache_quente.hits, cache_quente.misses))
+
+    if "Cache com Lock" in config.scenarios:
+        # Frio
+        cache_frio_l = InMemoryCache(use_lock=True, delay_seconds=delay_sec)
+        def execute_once_frio_l():
+            cache_frio_l.clear()
+            tasks = build_cache_tasks(cache_frio_l, "key", config.attempt_count)
+            result = RunExperiment(ThreadStrategy(max_workers=config.max_workers)).execute(experiment, tasks)
+            new_meta = dict(result.metadata)
+            new_meta["cache_hits"] = cache_frio_l.hits
+            new_meta["cache_misses"] = cache_frio_l.misses
+            return replace(result, metadata=new_meta)
+        summary_frio_l = runner.run(strategy_name="Cache com Lock (Frio)", execute_once=execute_once_frio_l)
+        results.append((summary_frio_l, cache_frio_l.hits, cache_frio_l.misses))
+
+        # Quente
+        cache_quente_l = InMemoryCache(use_lock=True, delay_seconds=delay_sec)
+        def execute_once_quente_l():
+            cache_quente_l.clear()
+            cache_quente_l.get("key") # populate
+            cache_quente_l.reset_counters()
+            tasks = build_cache_tasks(cache_quente_l, "key", config.attempt_count)
+            result = RunExperiment(ThreadStrategy(max_workers=config.max_workers)).execute(experiment, tasks)
+            new_meta = dict(result.metadata)
+            new_meta["cache_hits"] = cache_quente_l.hits
+            new_meta["cache_misses"] = cache_quente_l.misses
+            return replace(result, metadata=new_meta)
+        summary_quente_l = runner.run(strategy_name="Cache com Lock (Quente)", execute_once=execute_once_quente_l)
+        results.append((summary_quente_l, cache_quente_l.hits, cache_quente_l.misses))
+
+    summaries = [r[0] for r in results]
+    comparison = BenchmarkComparison.from_summaries(
+        scenario_name="Comparativo de Consistência e Otimização de Cache",
+        summaries=summaries,
+        baseline_strategy=None
+    )
+
+    cache_hits_map = {r[0].strategy_name: r[1] for r in results}
+    cache_misses_map = {r[0].strategy_name: r[2] for r in results}
+
+    save_experiment_to_db(experiment, comparison, cache_hits_map=cache_hits_map, cache_misses_map=cache_misses_map)
+    return comparison, cache_hits_map, cache_misses_map

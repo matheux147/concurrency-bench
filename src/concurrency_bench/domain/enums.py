@@ -8,6 +8,7 @@ class ExperimentType(StrEnum):
     CPU_BOUND = "cpu_bound"
     DATABASE = "database"
     HTTP = "http"
+    CACHE = "cache"
     CUSTOM = "custom"
 
 

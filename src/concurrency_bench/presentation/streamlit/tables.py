@@ -67,3 +67,29 @@ def build_stock_table(comparison: BenchmarkComparison, stocks_map: dict[str, int
         })
 
     return pd.DataFrame(data)
+
+
+def build_cache_table(
+    comparison: BenchmarkComparison,
+    cache_hits_map: dict[str, int],
+    cache_misses_map: dict[str, int]
+) -> pd.DataFrame:
+    data = []
+    for summary in comparison.summaries:
+        hits = cache_hits_map.get(summary.strategy_name, 0)
+        misses = cache_misses_map.get(summary.strategy_name, 0)
+        total = hits + misses
+        ratio = (hits / total * 100.0) if total > 0 else 0.0
+
+        data.append({
+            "Cenário": summary.strategy_name,
+            "Total de Requisições": total,
+            "Cache Hits": hits,
+            "Cache Misses (DB Hits)": misses,
+            "Hit Ratio (%)": f"{ratio:.1f}%",
+            "Tempo Médio (s)": f"{summary.elapsed.average:.4f}s",
+            "Tempo Mediano (s)": f"{summary.elapsed.median:.4f}s",
+            "Throughput Médio (reqs/s)": f"{summary.throughput.average:.2f}",
+        })
+
+    return pd.DataFrame(data)

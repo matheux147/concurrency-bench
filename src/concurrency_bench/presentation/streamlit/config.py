@@ -30,6 +30,15 @@ class StockConfig:
     scenarios: list[str]
 
 
+@dataclass
+class CacheConfig:
+    delay_ms: int
+    attempt_count: int
+    max_workers: int
+    repetitions: int
+    scenarios: list[str]
+
+
 def validate_cpu_params(strategies, task_count, max_workers, work_iterations, repetitions):
     errors = []
     if not strategies:
@@ -75,12 +84,27 @@ def validate_stock_params(scenarios, initial_stock, attempt_count, max_workers, 
     return errors
 
 
+def validate_cache_params(scenarios, delay_ms, attempt_count, max_workers, repetitions):
+    errors = []
+    if not scenarios:
+        errors.append("Selecione ao menos um cenário de cache.")
+    if delay_ms < 0:
+        errors.append("O delay do cache (ms) não pode ser negativo.")
+    if attempt_count <= 0:
+        errors.append("A quantidade de tentativas deve ser maior que zero.")
+    if max_workers <= 0:
+        errors.append("A concorrência (workers) deve ser maior que zero.")
+    if repetitions <= 0:
+        errors.append("O número de repetições deve ser maior que zero.")
+    return errors
+
+
 def render_config():
     st.sidebar.header("Configuração do Experimento")
 
     scenario = st.sidebar.selectbox(
         "Cenário",
-        ["CPU-bound", "I/O-bound HTTP", "Stock / PostgreSQL"],
+        ["CPU-bound", "I/O-bound HTTP", "Stock / PostgreSQL", "Cache / Memória"],
         index=0
     )
 
