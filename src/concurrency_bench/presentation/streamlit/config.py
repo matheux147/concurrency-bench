@@ -215,4 +215,39 @@ def render_config():
             scenarios=scenarios
         ), True
 
+    elif scenario == "Cache / Memória":
+        st.sidebar.subheader("Cenários de Cache")
+        scenarios = []
+        if st.sidebar.checkbox("Sem Cache", value=True):
+            scenarios.append("Sem Cache")
+        if st.sidebar.checkbox("Cache sem Lock", value=True):
+            scenarios.append("Cache sem Lock")
+        if st.sidebar.checkbox("Cache com Lock", value=True):
+            scenarios.append("Cache com Lock")
+
+        st.sidebar.subheader("Parâmetros")
+        delay_ms = st.sidebar.number_input(
+            "Delay de Banco / Carga (ms)", min_value=-1000, max_value=10000, value=100, step=50)
+        attempt_count = st.sidebar.number_input(
+            "Tentativas (Requisições)", min_value=-100, max_value=100000, value=50, step=5)
+        max_workers = st.sidebar.number_input(
+            "Concorrência (Workers)", min_value=-100, max_value=256, value=10, step=1)
+        repetitions = st.sidebar.number_input(
+            "Repetições do Benchmark", min_value=-10, max_value=50, value=3, step=1)
+
+        validation_errors = validate_cache_params(
+            scenarios, delay_ms, attempt_count, max_workers, repetitions)
+        if validation_errors:
+            for err in validation_errors:
+                st.sidebar.error(err)
+            return scenario, None, False
+
+        return scenario, CacheConfig(
+            delay_ms=delay_ms,
+            attempt_count=attempt_count,
+            max_workers=max_workers,
+            repetitions=repetitions,
+            scenarios=scenarios
+        ), True
+
     return scenario, None, False
