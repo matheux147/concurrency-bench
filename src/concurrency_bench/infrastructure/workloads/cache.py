@@ -45,7 +45,7 @@ class InMemoryCache:
         return val
 
 
-def masbuild_cache_tasks(
+def build_cache_tasks(
     cache: InMemoryCache,
     key: str,
     count: int,
