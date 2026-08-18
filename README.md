@@ -226,20 +226,6 @@ O `Lock` é um mecanismo utilizado para controlar o acesso a essa região e impe
 - Docker;
 - Docker Compose.
 
-### Preparação do PostgreSQL
-
-Crie o arquivo de configuração de ambiente a partir do modelo:
-
-```powershell
-Copy-Item .env.example .env
-```
-
-Inicie o PostgreSQL:
-
-```powershell
-docker compose up -d postgres
-```
-
 ### Instalação das Dependências
 
 Crie um ambiente virtual Python:
@@ -258,6 +244,20 @@ Instale o projeto e as dependências:
 
 ```powershell
 python -m pip install -e ".[dev]"
+```
+
+### Preparação do PostgreSQL
+
+Crie o arquivo de configuração de ambiente a partir do modelo:
+
+```powershell
+Copy-Item .env.example .env
+```
+
+Inicie o PostgreSQL:
+
+```powershell
+docker compose up -d postgres
 ```
 
 ---
